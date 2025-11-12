@@ -10,6 +10,12 @@ export const getReportsByDateRange = (startDate, endDate) => {
   });
 };
 
+export const searchReports = (keyword) => {
+  return api.get('/reports/search', {
+    params: { keyword },
+  });
+};
+
 export const getReport = (id) => {
   return api.get(`/reports/${id}`);
 };

@@ -1,7 +1,85 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { getTasks } from '../services/kanban';
 
 const Dashboard = ({ user }) => {
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  const loadTasks = async () => {
+    try {
+      const response = await getTasks();
+      setTasks(response.data);
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filter overdue tasks (tasks with deadline that has passed and status is not 'done')
+  const getOverdueTasks = () => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Set to midnight for accurate date comparison
+    
+    return tasks.filter((task) => {
+      if (!task.deadline || task.status === 'done') {
+        return false;
+      }
+      
+      const deadline = new Date(task.deadline);
+      deadline.setHours(0, 0, 0, 0);
+      
+      return deadline < now;
+    });
+  };
+
+  // Format date for display
+  const formatDateForDisplay = (date) => {
+    if (!date) return null;
+    return new Date(date).toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
+  // Get priority color
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'high':
+        return 'bg-red-100 text-red-800';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'low':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Get status display
+  const getStatusDisplay = (status) => {
+    switch (status) {
+      case 'backlog':
+        return 'Backlog';
+      case 'todo':
+        return 'Todo';
+      case 'in-progress':
+        return 'In Progress';
+      case 'done':
+        return 'Done';
+      default:
+        return status;
+    }
+  };
+
+  const overdueTasks = getOverdueTasks();
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
@@ -9,7 +87,7 @@ const Dashboard = ({ user }) => {
         <p className="mt-2 text-gray-600">Welcome back, {user.username}!</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Link
           to="/reports"
           className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
@@ -63,6 +141,84 @@ const Dashboard = ({ user }) => {
             </div>
           </div>
         </Link>
+      </div>
+
+      {/* Overdue Tasks Section */}
+      <div className="mt-8">
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-gray-900">Overdue Tasks</h2>
+            {overdueTasks.length > 0 && (
+              <span className="bg-red-100 text-red-800 text-sm font-semibold px-3 py-1 rounded-full">
+                {overdueTasks.length} {overdueTasks.length === 1 ? 'task' : 'tasks'}
+              </span>
+            )}
+          </div>
+
+          {loading ? (
+            <p className="text-gray-500 text-center py-4">Loading tasks...</p>
+          ) : overdueTasks.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">
+              Tidak ada task yang overdue. Semua task sudah selesai tepat waktu! 🎉
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {overdueTasks.map((task) => (
+                <div
+                  key={task._id}
+                  className="border-2 border-red-300 bg-red-50 rounded-lg p-4 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 mb-1">{task.title}</h3>
+                      <p className="text-xs text-gray-600 mb-1">
+                        By: {task.user?.username || 'Unknown'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {task.description && (
+                    <p className="text-sm text-gray-700 mb-2 line-clamp-2">
+                      {task.description}
+                    </p>
+                  )}
+
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-600">Status:</span>
+                      <span className="text-xs font-medium text-gray-800">
+                        {getStatusDisplay(task.status)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-600">Priority:</span>
+                      <span
+                        className={`text-xs px-2 py-1 rounded ${getPriorityColor(
+                          task.priority
+                        )}`}
+                      >
+                        {task.priority}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-600">Deadline:</span>
+                      <span className="text-xs font-semibold text-red-600">
+                        {formatDateForDisplay(task.deadline)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <Link
+                    to="/kanban"
+                    className="block w-full text-center text-sm bg-red-600 text-white px-3 py-2 rounded hover:bg-red-700 transition-colors"
+                  >
+                    View in Kanban
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

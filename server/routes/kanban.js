@@ -32,7 +32,7 @@ router.get('/:id', auth, async (req, res) => {
 // Create task
 router.post('/', auth, async (req, res) => {
   try {
-    const { title, description, status, priority } = req.body;
+    const { title, description, status, priority, startDate, deadline } = req.body;
 
     if (!title) {
       return res.status(400).json({ message: 'Please provide a title' });
@@ -49,7 +49,9 @@ router.post('/', auth, async (req, res) => {
       description: description || '',
       status: status || 'backlog',
       priority: priority || 'medium',
-      order: maxOrderTask ? maxOrderTask.order + 1 : 0
+      order: maxOrderTask ? maxOrderTask.order + 1 : 0,
+      startDate: startDate ? new Date(startDate) : null,
+      deadline: deadline ? new Date(deadline) : null
     });
 
     await task.save();
@@ -62,7 +64,7 @@ router.post('/', auth, async (req, res) => {
 // Update task (only own tasks)
 router.put('/:id', auth, async (req, res) => {
   try {
-    const { title, description, status, priority, order } = req.body;
+    const { title, description, status, priority, order, startDate, deadline } = req.body;
 
     const task = await KanbanTask.findOne({ _id: req.params.id, user: req.user._id });
     if (!task) {
@@ -74,6 +76,8 @@ router.put('/:id', auth, async (req, res) => {
     if (status !== undefined) task.status = status;
     if (priority !== undefined) task.priority = priority;
     if (order !== undefined) task.order = order;
+    if (startDate !== undefined) task.startDate = startDate ? new Date(startDate) : null;
+    if (deadline !== undefined) task.deadline = deadline ? new Date(deadline) : null;
 
     await task.save();
     res.json(task);

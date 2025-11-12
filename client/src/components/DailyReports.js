@@ -6,6 +6,7 @@ import {
   createReport,
   updateReport,
   deleteReport,
+  searchReports,
 } from '../services/reports';
 
 const DailyReports = ({ user }) => {
@@ -15,6 +16,9 @@ const DailyReports = ({ user }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [reportContent, setReportContent] = useState({ title: '', content: '' });
   const [loading, setLoading] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   // Helper function to format date to YYYY-MM-DD without timezone issues
   const formatDateForInput = (date) => {
@@ -162,9 +166,116 @@ const DailyReports = ({ user }) => {
     return null;
   };
 
+  const handleSearch = async (keyword) => {
+    setSearchKeyword(keyword);
+    if (!keyword || keyword.trim() === '') {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await searchReports(keyword);
+      setSearchResults(response.data);
+    } catch (error) {
+      console.error('Error searching reports:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchResultClick = (report) => {
+    const reportDate = new Date(report.date);
+    setSelectedDate(reportDate);
+    setSearchKeyword('');
+    setSearchResults([]);
+    // Scroll to calendar if needed
+    setTimeout(() => {
+      const calendarElement = document.querySelector('.react-calendar');
+      if (calendarElement) {
+        calendarElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="text-3xl font-bold text-gray-900 mb-6">Daily Reports</h1>
+
+      {/* Search Bar */}
+      <div className="mb-6 relative">
+        <div className="bg-white rounded-lg shadow-md p-4">
+          <div className="relative">
+            <input
+              type="text"
+              value={searchKeyword}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Cari report berdasarkan keyword..."
+              className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <svg
+              className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+
+          {/* Search Results */}
+          {searchKeyword && (
+            <div className="mt-3 max-h-64 overflow-y-auto">
+              {isSearching ? (
+                <div className="text-center py-4 text-gray-500">Mencari...</div>
+              ) : searchResults.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600 mb-2">
+                    {searchResults.length} hasil ditemukan
+                  </p>
+                  {searchResults.map((report) => (
+                    <div
+                      key={report._id}
+                      onClick={() => handleSearchResultClick(report)}
+                      className="border border-gray-200 rounded-lg p-3 hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-colors"
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <h3 className="font-medium text-gray-900 text-sm">
+                          {report.title || 'Untitled'}
+                        </h3>
+                        <span className="text-xs text-gray-500 ml-2">
+                          {new Date(report.date).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 mb-1">
+                        By: {report.user?.username || 'Unknown'}
+                      </p>
+                      <p className="text-xs text-gray-700 line-clamp-2">
+                        {report.content}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-gray-500">
+                  Tidak ada hasil ditemukan
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">

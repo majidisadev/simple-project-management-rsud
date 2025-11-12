@@ -27,6 +27,14 @@ const kanbanTaskSchema = new mongoose.Schema({
   order: {
     type: Number,
     default: 0
+  },
+  startDate: {
+    type: Date,
+    default: null
+  },
+  deadline: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

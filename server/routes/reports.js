@@ -34,6 +34,32 @@ router.get('/calendar', auth, async (req, res) => {
   }
 });
 
+// Search reports by keyword - all users can search all reports
+router.get('/search', auth, async (req, res) => {
+  try {
+    const { keyword } = req.query;
+    
+    if (!keyword || keyword.trim() === '') {
+      return res.json([]);
+    }
+    
+    const searchRegex = new RegExp(keyword, 'i');
+    const reports = await Report.find({
+      $or: [
+        { title: { $regex: searchRegex } },
+        { content: { $regex: searchRegex } }
+      ]
+    })
+    .populate('user', 'username')
+    .sort({ date: -1 })
+    .limit(50); // Limit results to 50
+    
+    res.json(reports);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Get single report - all users can view all reports
 router.get('/:id', auth, async (req, res) => {
   try {
